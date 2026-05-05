@@ -3,7 +3,7 @@
 # toggle_root_session.sh
 # Toggles root access on/off for the current session.
 # Run it once to enable, run it again to disable.
-# Always resets on reboot regardless.
+# does not reset on reboot from my tests
 #
 # On ENABLE: finds all root-owned directories that non-root users can't read,
 #            saves their original permissions, then opens them to all users.
@@ -246,7 +246,7 @@ else
     restart_ssh
   fi
 
-  # Write session flag to RAM — gone automatically on reboot
+  # Write session flag to RAM — gone automatically on running the script again
   echo "active" | run_cmd tee "$FLAG" > /dev/null
 
   echo ""
