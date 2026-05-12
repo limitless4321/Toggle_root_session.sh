@@ -14,7 +14,8 @@ sleep 2
 
 printf "Thanks fOr downloading ig :3\n"
 sleep 1
-
+clear
+# i hope this clear command works on the handheld emulators lol
 # ── ENSURE /dev/shm EXISTS ──────────────────────────────────────────
 # /dev/shm is RAM-backed and wiped on reboot — perfect for session data.
 mkdir -p /dev/shm 2>/dev/null || true
