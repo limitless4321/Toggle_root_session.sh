@@ -191,7 +191,7 @@ if [ -f "$FLAG" ]; then
   printf "==========================================\n"
   printf "  Disabling root session\n"
   printf "==========================================\n"
-  printf ""
+  printf "\n"
 
   # Restore all directories to their original permissions
   restore_root_dirs
@@ -213,7 +213,7 @@ if [ -f "$FLAG" ]; then
 
   printf "\n"
   printf "[OK] Root session DISABLED.\n"
-  printf ""
+  printf "\n"
   printf "  All directories restored to original permissions.\n"
   printf "  The file manager is back to normal user access.\n"
   printf "  Run this script again to re-enable.\n"
