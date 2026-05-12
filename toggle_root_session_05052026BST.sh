@@ -75,8 +75,8 @@ if [ "$OS_NAME" = "unknown" ]; then
   fi
 fi
 
-printf "  Detected OS : $OS_NAME"
-printf ""
+printf "  Detected OS : $OS_NAME \n"
+printf "\n"
 
 # ── HELPER: privilege-aware command runner ───────────────────────────
 # Runs directly if already root, via sudo if available, or direct fallback.
@@ -93,10 +93,10 @@ run_cmd() {
 
 # ── ALREADY ROOT NOTICE ─────────────────────────────────────────────
 if [ "$ALREADY_ROOT" = true ]; then
-  printf "  NOTE: $OS_NAME already runs as root."
-  printf "  Root access is always available on this firmware."
-  printf "  Continuing anyway to open directory permissions..."
-  printf ""
+  printf "  NOTE: $OS_NAME already runs as root.\n"
+  printf "  Root access is always available on this firmware.\n"
+  printf "  Continuing anyway to open directory permissions...\n"
+  printf "\n"
   sleep 3
 fi
 
@@ -116,7 +116,7 @@ restart_ssh() {
 # readable by other users. Saves original permissions to PERMS_BACKUP,
 # then adds o+rX (read + conditional execute) so the file manager can browse.
 open_root_dirs() {
-  printf "  Scanning for root-only directories..."
+  printf "  Scanning for root-only directories...\n"
   sleep 2
   # Wipe any stale backup from a previous session
   run_cmd rm -f "$PERMS_BACKUP"
@@ -157,7 +157,7 @@ open_root_dirs() {
       2>/dev/null)
   done
 
-  printf "  Opened $count root-only directories."
+  printf "  Opened $count root-only directories.\n"
 }
 
 # ── HELPER: restore original permissions ────────────────────────────
@@ -165,8 +165,8 @@ open_root_dirs() {
 # directory to its exact original octal permission value.
 restore_root_dirs() {
   if [ ! -f "$PERMS_BACKUP" ]; then
-    printf "  [WARNING] Permission backup not found — nothing to restore."
-    printf "  Directories may stay open until possibly next time you run the script i think."
+    printf "  [WARNING] Permission backup not found — nothing to restore.\n"
+    printf "  Directories may stay open until possibly next time you run the script i think.\n"
     return
   fi
 
@@ -181,16 +181,16 @@ restore_root_dirs() {
   done < "$PERMS_BACKUP"
 
   run_cmd rm -f "$PERMS_BACKUP"
-  echo "  Restored $count directories to original permissions."
+  printf "  Restored $count directories to original permissions.\n"
 }
 
 # ── TOGGLE ──────────────────────────────────────────────────────────
 
 if [ -f "$FLAG" ]; then
   # ── ROOT IS ACTIVE — DISABLE ──────────────────────────────────────
-  printf "=========================================="
-  printf "  Disabling root session"
-  printf "=========================================="
+  printf "==========================================\n"
+  printf "  Disabling root session\n"
+  printf "==========================================\n"
   printf ""
 
   # Restore all directories to their original permissions
@@ -211,22 +211,22 @@ if [ -f "$FLAG" ]; then
   # Remove session flag from RAM
   run_cmd rm -f "$FLAG"
 
+  printf "\n"
+  printf "[OK] Root session DISABLED.\n"
   printf ""
-  printf "[OK] Root session DISABLED."
-  printf ""
-  printf "  All directories restored to original permissions."
-  printf "  The file manager is back to normal user access."
-  printf "  Run this script again to re-enable."
-  printf ""
-  printf "=========================================="
+  printf "  All directories restored to original permissions.\n"
+  printf "  The file manager is back to normal user access.\n"
+  printf "  Run this script again to re-enable.\n"
+  printf "\n"
+  printf "==========================================\n"
   sleep 5
 
 else
   # ── ROOT IS INACTIVE — ENABLE ─────────────────────────────────────
-  printf "=========================================="
-  printf "  Enabling root session (until next run of script)"
-  printf "=========================================="
-  printf ""
+  printf "==========================================\n"
+  printf "  Enabling root session (until next run of script)\n"
+  printf "==========================================\n"
+  printf "\n"
 
   # Set root password — chpasswd if available, BusyBox passwd fallback
   if [ "$HAS_CHPASSWD" = true ]; then
@@ -255,16 +255,16 @@ else
   # Write session flag to RAM — gone automatically on running the script again
   echo "active" | run_cmd tee "$FLAG" > /dev/null
 
-  printf ""
-  printf "[OK] Root session ACTIVE."
-  printf ""
-  printf "  Username : root"
-  printf "  Password : $DEFAULT_PASSWORD"
-  printf ""
-  printf "  All root-only directories are now readable."
-  printf "  Run this script again to disable early."
-  printf "  Rerun script to disable ig."
-  printf ""
-  printf "=========================================="
+  printf "\n"
+  printf "[OK] Root session ACTIVE.\n"
+  printf "\n"
+  printf "  Username : root\n"
+  printf "  Password : $DEFAULT_PASSWORD \n"
+  printf "\n"
+  printf "  All root-only directories are now readable.\n"
+  printf "  Run this script again to disable early.\n"
+  printf "  Rerun script to disable ig.\n"
+  printf "\n"
+  printf "==========================================\n"
   sleep 5
 fi
