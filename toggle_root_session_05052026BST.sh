@@ -9,10 +9,10 @@
 #            saves their original permissions, then opens them to all users.
 # On DISABLE: restores every directory to its exact original permissions.
 #
-printf You are running toggle root, you must rerun this script to disable it, or twice after reboot.
+printf "You are running toggle root, you must rerun this script to disable it, or twice after reboot.\n"
 sleep 2
 
-printf Thanks fOr downloading ig :3
+printf "Thanks fOr downloading ig :3\n"
 sleep 1
 
 # ── ENSURE /dev/shm EXISTS ──────────────────────────────────────────
