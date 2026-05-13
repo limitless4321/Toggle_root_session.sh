@@ -5,3 +5,4 @@ this file simply does what it says on the tin, and it also clears root on reboot
 
 update:
 it does not clear root on reboot (when i tested it), it actually just need to be run again, and new file is just an update to the directory read perms (see 05052026BST)
+^ changed echo to printf(12052026BST) and a couple other things, i do hope this script works properly, (current date on update: 13052026BST)
