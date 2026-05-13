@@ -102,7 +102,7 @@ open_root_dirs() {
   printf "  Scanning for root-only directories...\n"
   sleep 2
   run_cmd rm -f "$PERMS_BACKUP"
-  run_cmd touch "$PERMS_BACKUP"
+  run_cmd bash -c "cat > '$PERMS_BACKUP'" < /dev/null 2>/dev/null || run_cmd touch "$PERMS_BACKUP"
 
   local count=0
 
@@ -142,14 +142,17 @@ restore_root_dirs() {
   fi
 
   local count=0
+  local perm
+  local path
 
-  while IFS= read -r -d '' perm; do
-    IFS= read -r -d '' path || break
+  exec 3< "$PERMS_BACKUP"
+  while IFS= read -r -d '' -u 3 perm && IFS= read -r -d '' -u 3 path; do
     [ -z "$perm" ] || [ -z "$path" ] && continue
 
     run_cmd chmod "$perm" "$path"
     count=$((count + 1))
-  done < "$PERMS_BACKUP"
+  done
+  exec 3<&-
 
   run_cmd rm -f "$PERMS_BACKUP"
   printf "  Restored $count directories to original permissions.\n"
@@ -204,7 +207,7 @@ else
     run_cmd sed -i 's/^PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
 
     grep -q "PermitRootLogin" /etc/ssh/sshd_config || \
-      echo "PermitRootLogin yes" | run_cmd tee -a /etc/ssh/sshd_config > /dev/null
+      run_cmd bash -c "echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config"
 
     restart_ssh
   fi
