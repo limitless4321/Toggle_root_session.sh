@@ -14,16 +14,16 @@ printf "if you did end up rebooting before running this again, you must run this
 sleep 2
 
 printf "Thanks for downloading ig :3\n"
-sleep 1
+sleep 2
 clear
 # i hope this clear command works on the handheld emulators lol
 
-# ── ENSURE /dev/shm EXISTS ──────────────────────────────────────────
-# /dev/shm is RAM-backed and wiped on reboot — perfect for session data.
-mkdir -p /dev/shm 2>/dev/null || true
+# ── create custom backup folder ──────────────────────────────────────────
+# this keeps backup i hope
+mkdir -p /backuproot/shm 2>/dev/null || true
 
-FLAG="/dev/shm/root_session_active"
-PERMS_BACKUP="/dev/shm/root_perms_backup"
+FLAG="/backuproot/shm/root_session_active"
+PERMS_BACKUP="/backuproot/shm/root_perms_backup"
 
 # Directories to scan for root-only subdirs.
 # Deliberately excludes virtual/device filesystems that must never be touched.
@@ -210,7 +210,7 @@ if [ -f "$FLAG" ]; then
     restart_ssh
   fi
 
-  # Remove session flag from RAM
+  # Remove session flag from backuproot folder
   run_cmd rm -f "$FLAG"
 
   printf "\n"
