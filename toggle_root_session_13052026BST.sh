@@ -1,0 +1,226 @@
+#!/bin/bash
+#
+# toggle_root_session.sh
+# Toggles root access on/off for the current session.
+# Run it once to enable, run it again to disable.
+# does not reset on reboot from my tests
+#
+# On ENABLE: finds all root-owned directories that non-root users can't read,
+#            saves their original permissions, then opens them to all users.
+# On DISABLE: restores every directory to its exact original permissions.
+#
+printf "You are running toggle root, you must rerun this script to disable it,\n"
+printf "if you did end up rebooting before running this again, you must run this twice\n\n" 
+sleep 2
+
+printf "Thanks for downloading ig :3\n"
+sleep 2
+clear
+
+mkdir -p /backuproot/shm 2>/dev/null || true
+
+FLAG="/backuproot/shm/root_session_active"
+PERMS_BACKUP="/backuproot/shm/root_perms_backup"
+
+SCAN_DIRS="/root /etc /var /opt /boot /home /usr/local"
+
+OS_NAME=""
+ALREADY_ROOT=false
+HAS_SUDO=false
+HAS_SYSTEMCTL=false
+HAS_CHPASSWD=false
+DEFAULT_PASSWORD="ark"
+
+if [ "$(id -u)" = "0" ]; then
+  ALREADY_ROOT=true
+fi
+
+command -v sudo       >/dev/null 2>&1 && HAS_SUDO=true
+command -v systemctl  >/dev/null 2>&1 && HAS_SYSTEMCTL=true
+command -v chpasswd   >/dev/null 2>&1 && HAS_CHPASSWD=true
+
+if [ -f /etc/os-release ]; then
+  . /etc/os-release
+  case "$ID" in
+    arkos|ubuntu)   OS_NAME="ArkOS";    DEFAULT_PASSWORD="ark"     ;;
+    rocknix|jelos)  OS_NAME="ROCKNIX";  DEFAULT_PASSWORD="root"    ;;
+    muos)           OS_NAME="muOS";     DEFAULT_PASSWORD="root"    ;;
+    batocera)       OS_NAME="Batocera"; DEFAULT_PASSWORD="linux"   ;;
+    emuelec)        OS_NAME="EmuELEC";  DEFAULT_PASSWORD="emuelec" ;;
+    *)
+      OS_NAME="${PRETTY_NAME:-${ID:-}}"
+      DEFAULT_PASSWORD="ark"
+      ;;
+  esac
+fi
+
+if [ -z "$OS_NAME" ]; then
+  OS_NAME="unknown"
+fi
+
+if [ "$OS_NAME" = "unknown" ]; then
+  if   [ -f /usr/share/rocknix/info ];  then OS_NAME="ROCKNIX";  DEFAULT_PASSWORD="root"
+  elif [ -d /opt/muos ];                 then OS_NAME="muOS";     DEFAULT_PASSWORD="root"
+  elif [ -f /usr/bin/batocera-info ];    then OS_NAME="Batocera"; DEFAULT_PASSWORD="linux"
+  elif [ -f /etc/emuelec-release ];      then OS_NAME="EmuELEC";  DEFAULT_PASSWORD="emuelec"
+  else                                        OS_NAME="Unknown Linux"; DEFAULT_PASSWORD="ark"
+  fi
+fi
+
+printf "  Detected OS : $OS_NAME \n"
+printf "\n"
+
+run_cmd() {
+  if [ "$ALREADY_ROOT" = true ]; then
+    "$@" 2>/dev/null || true
+  elif [ "$HAS_SUDO" = true ]; then
+    sudo "$@" 2>/dev/null || true
+  else
+    "$@" 2>/dev/null || true
+  fi
+}
+
+if [ "$ALREADY_ROOT" = true ]; then
+  printf "  NOTE: $OS_NAME already runs as root.\n"
+  printf "  Root access is always available on this firmware.\n"
+  printf "  Continuing anyway to open directory permissions...\n"
+  printf "\n"
+  sleep 3
+fi
+
+restart_ssh() {
+  if [ "$HAS_SYSTEMCTL" = true ]; then
+    run_cmd systemctl restart ssh
+    run_cmd systemctl restart sshd
+  else
+    run_cmd service ssh restart
+    run_cmd service sshd restart
+  fi
+}
+
+open_root_dirs() {
+  printf "  Scanning for root-only directories...\n"
+  sleep 2
+  run_cmd rm -f "$PERMS_BACKUP"
+  run_cmd touch "$PERMS_BACKUP"
+
+  local count=0
+
+  for scan_dir in $SCAN_DIRS; do
+    [ -d "$scan_dir" ] || continue
+
+    while IFS= read -r -d '' path; do
+      orig=$(stat --format="%a" "$path" 2>/dev/null)
+      [ -z "$orig" ] && continue
+
+      printf '%s\0%s\0' "$orig" "$path" >> "$PERMS_BACKUP"
+
+      run_cmd chmod o+rX "$path"
+      count=$((count + 1))
+    done < <(find "$scan_dir" \
+      -maxdepth 5 \
+      -user root \
+      -type d \
+      ! -perm -o+r \
+      ! -path "*/proc/*" \
+      ! -path "*/sys/*" \
+      ! -path "*/dev/*" \
+      ! -path "*/run/*" \
+      ! -path "*/.git/*" \
+      -print0 \
+      2>/dev/null)
+  done
+
+  printf "  Opened $count root-only directories.\n"
+}
+
+restore_root_dirs() {
+  if [ ! -f "$PERMS_BACKUP" ]; then
+    printf "  [WARNING] Permission backup not found — nothing to restore.\n"
+    printf "  Directories may stay open until possibly next time you run the script i think.\n"
+    return
+  fi
+
+  local count=0
+
+  while IFS= read -r -d '' perm; do
+    IFS= read -r -d '' path || break
+    [ -z "$perm" ] || [ -z "$path" ] && continue
+
+    run_cmd chmod "$perm" "$path"
+    count=$((count + 1))
+  done < "$PERMS_BACKUP"
+
+  run_cmd rm -f "$PERMS_BACKUP"
+  printf "  Restored $count directories to original permissions.\n"
+}
+
+if [ -f "$FLAG" ]; then
+  printf "==========================================\n"
+  printf "  Disabling root session\n"
+  printf "==========================================\n"
+  printf "\n"
+
+  restore_root_dirs
+
+  run_cmd passwd -l root
+
+  run_cmd chmod 700 /root
+
+  if [ -f /etc/ssh/sshd_config ]; then
+    run_cmd sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+    restart_ssh
+  fi
+
+  run_cmd rm -f "$FLAG"
+
+  printf "\n"
+  printf "[OK] Root session DISABLED.\n"
+  printf "\n"
+  printf "  All directories restored to original permissions.\n"
+  printf "  The file manager is back to normal user access.\n"
+  printf "  Run this script again to re-enable.\n"
+  printf "\n"
+  printf "==========================================\n"
+  sleep 5
+
+else
+  printf "==========================================\n"
+  printf "  Enabling root session (until next run of script)\n"
+  printf "==========================================\n"
+  printf "\n"
+
+  if [ "$HAS_CHPASSWD" = true ]; then
+    echo "root:$DEFAULT_PASSWORD" | run_cmd chpasswd
+  else
+    printf '%s\n%s\n' "$DEFAULT_PASSWORD" "$DEFAULT_PASSWORD" | run_cmd passwd root
+  fi
+
+  run_cmd passwd -u root
+
+  open_root_dirs
+
+  if [ -f /etc/ssh/sshd_config ]; then
+    run_cmd sed -i 's/^PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+    grep -q "PermitRootLogin" /etc/ssh/sshd_config || \
+      echo "PermitRootLogin yes" | run_cmd tee -a /etc/ssh/sshd_config > /dev/null
+
+    restart_ssh
+  fi
+
+  echo "active" | run_cmd tee "$FLAG" > /dev/null
+
+  printf "\n"
+  printf "[OK] Root session ACTIVE.\n"
+  printf "\n"
+  printf "  Username : root\n"
+  printf "  Password : $DEFAULT_PASSWORD \n"
+  printf "\n"
+  printf "  All root-only directories are now readable.\n"
+  printf "  Run this script again to disable early.\n"
+  printf "  Rerun script to disable ig.\n"
+  printf "\n"
+  printf "==========================================\n"
+  sleep 5
+fi
