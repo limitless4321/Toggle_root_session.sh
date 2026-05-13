@@ -9,13 +9,15 @@
 #            saves their original permissions, then opens them to all users.
 # On DISABLE: restores every directory to its exact original permissions.
 #
-printf "You are running toggle root, you must rerun this script to disable it, or twice after reboot.\n"
+printf "You are running toggle root, you must rerun this script to disable it,\n"
+printf "if you did end up rebooting before running this again, you must run this twice\n\n" 
 sleep 2
 
-printf "Thanks fOr downloading ig :3\n"
+printf "Thanks for downloading ig :3\n"
 sleep 1
 clear
 # i hope this clear command works on the handheld emulators lol
+
 # ── ENSURE /dev/shm EXISTS ──────────────────────────────────────────
 # /dev/shm is RAM-backed and wiped on reboot — perfect for session data.
 mkdir -p /dev/shm 2>/dev/null || true
