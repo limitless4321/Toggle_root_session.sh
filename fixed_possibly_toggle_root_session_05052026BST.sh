@@ -24,10 +24,10 @@ fi
 
 # ── create custom backup folder ──────────────────────────────────────────
 # this keeps backup i hope
-mkdir -p /backuproot/shm 2>/dev/null || true
+mkdir -p /opt/backuproot/shm 2>/dev/null || true
 
-FLAG="/backuproot/shm/root_session_active"
-PERMS_BACKUP="/backuproot/shm/root_perms_backup"
+FLAG="/opt/backuproot/shm/root_session_active"
+PERMS_BACKUP="/opt/backuproot/shm/root_perms_backup"
 
 # Directories to scan for root-only subdirs.
 # Deliberately excludes virtual/device filesystems that must never be touched.
@@ -117,6 +117,19 @@ restart_ssh() {
   fi
 }
 
+# ── HELPER: get file permissions safely ──────────────────────────────
+# Tries stat first (GNU), falls back to stat -c (BusyBox), then ls as last resort
+get_perms() {
+  local path="$1"
+  local perms
+  
+  perms=$(stat --format="%a" "$path" 2>/dev/null) || \
+  perms=$(stat -c "%a" "$path" 2>/dev/null) || \
+  perms=$(ls -ld "$path" 2>/dev/null | awk '{print $1}' | cut -c 2-)
+  
+  [ -n "$perms" ] && printf '%s' "$perms"
+}
+
 # ── HELPER: open root-only directories ──────────────────────────────
 # Finds every root-owned directory inside SCAN_DIRS that is not currently
 # readable by other users. Saves original permissions to PERMS_BACKUP,
@@ -140,7 +153,7 @@ open_root_dirs() {
     # process and the count is accurate when we echo it after the loop.
     while IFS= read -r -d '' path; do
       # Save original octal permissions before changing anything
-      orig=$(stat --format="%a" "$path" 2>/dev/null)
+      orig=$(get_perms "$path")
       [ -z "$orig" ] && continue
 
       # Write to backup: "PERM\0/path/to/dir\0" using NUL delimiters for safety
@@ -167,7 +180,7 @@ open_root_dirs() {
   printf "  Opened $count root-only directories.\n"
 }
 
-# ── HELPER: restore original permissions ────────────────────────────
+# ── HELPER: restore original permissions ─────────────────────��──────
 # Reads the backup file written by open_root_dirs and restores each
 # directory to its exact original octal permission value.
 restore_root_dirs() {
@@ -184,7 +197,8 @@ restore_root_dirs() {
   exec 3< "$PERMS_BACKUP"
   while IFS= read -r -d '' -u 3 perm && IFS= read -r -d '' -u 3 path; do
     # Skip blank or malformed lines
-    [ -z "$perm" ] || [ -z "$path" ] && continue
+    [ -z "$perm" ] && continue
+    [ -z "$path" ] && continue
 
     run_cmd chmod "$perm" "$path"
     count=$((count + 1))
@@ -198,7 +212,7 @@ restore_root_dirs() {
 # ── TOGGLE ──────────────────────────────────────────────────────────
 
 if [ -f "$FLAG" ]; then
-  # ── ROOT IS ACTIVE — DISABLE ──────────────────────────────────────
+  # ── ROOT IS ACTIVE — DISABLE ─────────────────────────────────────��
   printf "==========================================\n"
   printf "  Disabling root session\n"
   printf "==========================================\n"
